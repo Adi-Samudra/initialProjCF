@@ -1,0 +1,40 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "initprojbackend",
+    "main": "src/index.ts",
+    "compatibility_date": "2025-02-27",
+    // "compatibility_flags": [
+    //   "nodejs_compat"
+    // ],
+    "vars": {
+      "apitoken": "AIzaSyCCAwncR_zY7V69sWLKIsUoHcCeI0XFJX0"
+    },
+    // "kv_namespaces": [
+    //   {
+    //     "binding": "MY_KV_NAMESPACE",
+    //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    //   }
+    // ],
+    // "r2_buckets": [
+    //   {
+    //     "binding": "MY_BUCKET",
+    //     "bucket_name": "my-bucket"
+    //   }
+    // ],
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "temp-Aditya-ipCF",
+        "database_id": "42a8319b-4594-49f5-857d-9312c248f854",
+        "migrations_dir": "drizzle/migrations"
+      }
+    ],
+    "ai": {
+      "binding": "AI"
+    }
+    // "observability": {
+    //   "enabled": true,
+    //   "head_sampling_rate": 1
+    // }
+  }
+  

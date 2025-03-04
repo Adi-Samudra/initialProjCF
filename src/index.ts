@@ -7,10 +7,35 @@ import { drizzle } from "drizzle-orm/d1";
 import { users } from "./db/schema";
 import type { Env } from "./worker";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
+import userRoutes from './routes/userRoutes';
 
 const app = new Hono<{ Bindings: Env; }>();
 
+app.onError((err, c) => {
+  if (err instanceof Error && err.cause) {
+    // Handle Zod validation errors
+    const zodError = err.cause as { issues?: { code: string; message: string; path: string[]; }[] };
+    if (zodError.issues) {
+      // const errorMessages = zodError.issues.map(issue => {
+      //   // const field = issue.path.join('.') || 'field';
+      //   // return `${field}: ${issue.message}`;
+      //   return `${issue.message}`;
+      // }).join(' and ');
+      return c.json({
+        success: false,
+        message: zodError.issues[0].message,
+        // message: errorMessages
+      }, 400);
+    }
+  }
+  // Handle other errors
+  return c.json({
+    success: false,
+    message: err instanceof Error ? err.message : 'An unexpected error occurred'
+  }, 500);
+});
+
+app.route("/api/users", userRoutes);
 
 app.get('/', (c) => {
   return c.text('Hello Hono!')
@@ -20,18 +45,38 @@ app.post("/addUser", zValidator("json", createUserSchema), async (c) => {
   const db = drizzle(c.env.DB);
   const body = c.req.valid("json");
   try {
-    const result = await db.insert(users).values({ userID: body.userID, name: body.name, email: body.email });
-    if (result && result.success) {
-      return c.json({ success: true, message: "User added successfully" });
-    }
-    else if (result && !result.success) {
-      return c.json({ success: false, message: !result.error ? "Unknown error" : !result.error });
-    }
+    const result = await db.insert(users).values({ 
+      userID: body.userID, 
+      name: body.name, 
+      email: body.email,
+      phoneNumber: body.phoneNumber, // Add phoneNumber field
+      remainingChats: 5 // Using the default value explicitly
+    });
+    return c.json({ success: true, message: "User added successfully" });
   }
   catch (e) {
-    return c.json({ success: false, message: e });
+    console.error("Database error:", e);
+    
+    // Handle unique constraint violations
+    if (e && typeof e === 'object' && 'message' in e) {
+      const errorMessage = e.message as string;
+      if (errorMessage.includes('UNIQUE constraint failed')) {
+        if (errorMessage.includes('users.email')) {
+          return c.json({ success: false, message: "Email already exists" }, 409);
+        }
+        if (errorMessage.includes('users.userID')) {
+          return c.json({ success: false, message: "UserID already exists" }, 409);
+        }
+      }
+    }
+    
+    // Generic database error
+    return c.json({ 
+      success: false, 
+      message: "An error occurred while adding the user",
+      error: process.env.NODE_ENV === 'development' ? String(e) : undefined
+    }, 500);
   }
-
 });
 
 app.post("/updateUser", zValidator("json", updateUserSchema), async (c) => {
@@ -53,6 +98,7 @@ app.post("/updateUser", zValidator("json", updateUserSchema), async (c) => {
     }
   }
   catch(e){
+    console.log("*************************************\n"+e);
     return c.json({success:false,message:e});
   }
 
@@ -67,12 +113,12 @@ app.get("/getAllUser", async (c) => {
 app.post("/deleteUser", zValidator("json", deleteUserSchema), async (c) => {
   const db = drizzle(c.env.DB);
   const body = await c.req.valid("json");
-  const result = await db.delete(users).where(eq(users.name, body.name));
+  const result = await db.delete(users).where(eq(users.userID, body.userID));
 
   if (result.success) {
     return c.json({ success: true, "message": "User deleted successfully" });
   }
-})
+});
 
 app.get("/LLM", async (c) => {
   const api_token = c.env.apitoken;

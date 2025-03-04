@@ -1,6 +1,6 @@
-interface Env{
-    DB:D1Database;
-    apitoken:string;
+interface Env {
+  DB: D1Database;
+  apitoken: string;
 }
 
-export {Env};
+export { Env };
