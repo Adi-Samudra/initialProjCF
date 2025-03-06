@@ -17,19 +17,21 @@ app.get('/', (c) => {
 })
 
 app.post("/addUser", zValidator("json", createUserSchema), async (c) => {
+  try {
   const db = drizzle(c.env.DB);
   const body = c.req.valid("json");
-  try {
+  // console.log(body);
     const result = await db.insert(users).values({ userID: body.userID, name: body.name, email: body.email });
     if (result && result.success) {
       return c.json({ success: true, message: "User added successfully" });
     }
     else if (result && !result.success) {
-      return c.json({ success: false, message: !result.error ? "Unknown error" : !result.error });
+      return c.json({ success: false, message: result.error ? !result.error : "Unknown error" });
     }
   }
   catch (e) {
-    return c.json({ success: false, message: e });
+    console.log(e);
+    return c.json({ success: false, message: "Internal Error" });
   }
 
 });
@@ -58,10 +60,33 @@ app.post("/updateUser", zValidator("json", updateUserSchema), async (c) => {
 
 });
 
+app.get('/posts', (c) => {
+  return c.text('Many posts')
+})
+
+app.post('/posts', (c) => {
+  return c.json(
+    {
+      message: 'Created',
+    },
+    201,
+    {
+      'X-Custom': 'Thank you',
+    }
+  )
+})
+
 app.get("/getAllUser", async (c) => {
-  const db = drizzle(c.env.DB);
-  const result = await db.select().from(users).all();
-  return c.json(result);
+  // try{
+  // console.log("******************\ncalled"+c.env)
+    const db = drizzle(c.env.DB);
+    const result = await db.select().from(users).all();
+    console.log(JSON.stringify(result, null, 2)+"******************\n");
+    return c.json({success:true , result});
+  // }
+  // catch(e){
+  //   return c.json({success:false,message:e});
+  // }
 });
 
 app.post("/deleteUser", zValidator("json", deleteUserSchema), async (c) => {
@@ -75,7 +100,7 @@ app.post("/deleteUser", zValidator("json", deleteUserSchema), async (c) => {
 })
 
 app.get("/LLM", async (c) => {
-  const api_token = c.env.apitoken;
+  const api_token = "AIzaSyCCAwncR_zY7V69sWLKIsUoHcCeI0XFJX0"//c.env.apitoken;
   console.log(api_token);
   const account_id = "b0e6a5b1c1eac4f367363b71681bd4b8";
   const gateway_name = "initialprojectgateway";
